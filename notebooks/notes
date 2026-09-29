@@ -1,0 +1,10 @@
+Dataset: 15.100 imagens
+Classes: 151 Pokémon
+Treino: 10.570
+Validação: 2.265
+Teste: 2.265
+Arquitetura: MobileNetV2 + Transfer Learning
+Fine-tuning: últimas camadas
+V1: 80,00%
+V2: 85,21%
+Melhoria: +5,21 p.p.
