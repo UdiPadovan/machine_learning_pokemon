@@ -1,34 +1,30 @@
-# Ambiente virtual
+
+# AMBIENTE VIRTUAL
 .venv/
 venv/
 env/
 
-# Python
+# DATASET
+dataset/kaggle/
+dataset/organized/
+dataset/train/
+dataset/validation/
+dataset/test/
+
+# CACHE DO PYTHON
 __pycache__/
 *.py[cod]
-*.pyd
+*$py.class
 
-# Jupyter
+# JUPYTER
 .ipynb_checkpoints/
 
-# Machine Learning - datasets
-dataset/
-data/
-
-# Modelos treinados
-model/
-*.keras
-*.h5
-*.hdf5
-
-# Logs do treinamento
-logs/
-*.log
-
-# IDE
+# VSCODE
 .vscode/
-.idea/
 
-# Sistema
+# SISTEMA
 .DS_Store
 Thumbs.db
+
+# LOG
+*.log
