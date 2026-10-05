@@ -17,31 +17,57 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 MODEL_PATH = BASE_DIR / "model" / "pokemon_model_v2.keras"
 CLASS_NAMES_PATH = BASE_DIR / "model" / "class_names.json"
 
+# Ícone personalizado
+ICON_URL = "https://img.icons8.com/?size=100&id=45658&format=png&color=000000"
+
 st.set_page_config(
     page_title="PokéVision",
-    page_icon="🔴",
+    page_icon=ICON_URL,
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
 # Cores oficiais dos tipos
 TYPE_COLORS = {
-    "normal": "#A8A77A", "fire": "#EE8130", "water": "#6390F0",
-    "electric": "#F7D02C", "grass": "#7AC74C", "ice": "#96D9D6",
-    "fighting": "#C22E28", "poison": "#A33EA1", "ground": "#E2BF65",
-    "flying": "#A98FF3", "psychic": "#F95587", "bug": "#A6B91A",
-    "rock": "#B6A136", "ghost": "#735797", "dragon": "#6F35FC",
-    "dark": "#705746", "steel": "#B7B7CE", "fairy": "#D685AD"
+    "normal": "#A8A77A", 
+    "fire": "#EE8130", 
+    "water": "#6390F0",
+    "electric": "#F7D02C", 
+    "grass": "#7AC74C", 
+    "ice": "#96D9D6",
+    "fighting": "#C22E28", 
+    "poison": "#A33EA1", 
+    "ground": "#E2BF65",
+    "flying": "#A98FF3", 
+    "psychic": "#F95587", 
+    "bug": "#A6B91A",
+    "rock": "#B6A136", 
+    "ghost": "#735797", 
+    "dragon": "#6F35FC",
+    "dark": "#705746", 
+    "steel": "#B7B7CE", 
+    "fairy": "#D685AD"
 }
 
 # Tradução dos tipos
 TRANSLATE_TYPES = {
-    "normal": "Normal", "fire": "Fogo", "water": "Água",
-    "electric": "Elétrico", "grass": "Planta", "ice": "Gelo",
-    "fighting": "Luta", "poison": "Veneno", "ground": "Terra",
-    "flying": "Voador", "psychic": "Psíquico", "bug": "Inseto",
-    "rock": "Pedra", "ghost": "Fantasma", "dragon": "Dragão",
-    "dark": "Sombrio", "steel": "Aço", "fairy": "Fada"
+    "normal": "Normal", 
+    "fire": "Fogo", 
+    "water": "Água",
+    "electric": "Elétrico", 
+    "grass": "Planta", 
+    "ice": "Gelo",
+    "fighting": "Luta", 
+    "poison": "Veneno", 
+    "ground": "Terra",
+    "flying": "Voador", 
+    "psychic": "Psíquico", 
+    "bug": "Inseto",
+    "rock": "Pedra", "ghost": 
+    "Fantasma", "dragon": "Dragão",
+    "dark": "Sombrio", 
+    "steel": "Aço", 
+    "fairy": "Fada"
 }
 
 # Tradução das estatísticas
