@@ -1,5 +1,6 @@
 import json
 import re
+import base64
 from pathlib import Path
 import numpy as np
 import requests
@@ -17,7 +18,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 MODEL_PATH = BASE_DIR / "model" / "pokemon_model_v2.keras"
 CLASS_NAMES_PATH = BASE_DIR / "model" / "class_names.json"
 
-# Ícone personalizado
+# Imagem de Fundo (Se estiver na mesma pasta ou na pasta assets)
+BACKGROUND_IMAGE_PATH = BASE_DIR / "assets" / "image" / "fundo_floresta.jpg"
+
 ICON_URL = "https://img.icons8.com/?size=100&id=45658&format=png&color=000000"
 
 st.set_page_config(
@@ -27,52 +30,37 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Cores oficiais dos tipos
+# Função para converter imagem local para Base64 (para uso direto no CSS/HTML)
+def get_image_base64(image_path):
+    if Path(image_path).exists():
+        with open(image_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    return ""
+
+bg_base64 = get_image_base64(BACKGROUND_IMAGE_PATH)
+bg_css_url = f"data:image/jpeg;base64,{bg_base64}" if bg_base64 else "https://i.imgur.com/8QzX9ZW.jpg"
+
+# Cores por Tipo
 TYPE_COLORS = {
-    "normal": "#A8A77A", 
-    "fire": "#EE8130", 
-    "water": "#6390F0",
-    "electric": "#F7D02C", 
-    "grass": "#7AC74C", 
-    "ice": "#96D9D6",
-    "fighting": "#C22E28", 
-    "poison": "#A33EA1", 
-    "ground": "#E2BF65",
-    "flying": "#A98FF3", 
-    "psychic": "#F95587", 
-    "bug": "#A6B91A",
-    "rock": "#B6A136", 
-    "ghost": "#735797", 
-    "dragon": "#6F35FC",
-    "dark": "#705746", 
-    "steel": "#B7B7CE", 
-    "fairy": "#D685AD"
+    "grass": "#48d0b0", "fire": "#fb6c6c", "water": "#76bdfe",
+    "electric": "#ffd86f", "poison": "#a040a0", "bug": "#a8b820",
+    "normal": "#a8a878", "flying": "#a890f0", "ground": "#e0c068",
+    "rock": "#b8a038", "ice": "#98d8d8", "fighting": "#c03028",
+    "psychic": "#f85888", "ghost": "#705898", "dragon": "#7038f8",
+    "dark": "#705848", "steel": "#b8b8d0", "fairy": "#f0b6bc"
 }
 
-# Tradução dos tipos
 TRANSLATE_TYPES = {
-    "normal": "Normal", 
-    "fire": "Fogo", 
-    "water": "Água",
-    "electric": "Elétrico", 
-    "grass": "Planta", 
-    "ice": "Gelo",
-    "fighting": "Luta", 
-    "poison": "Veneno", 
-    "ground": "Terra",
-    "flying": "Voador", 
-    "psychic": "Psíquico", 
-    "bug": "Inseto",
-    "rock": "Pedra", "ghost": 
-    "Fantasma", "dragon": "Dragão",
-    "dark": "Sombrio", 
-    "steel": "Aço", 
-    "fairy": "Fada"
+    "normal": "Normal", "fire": "Fogo", "water": "Água",
+    "electric": "Elétrico", "grass": "Planta", "ice": "Gelo",
+    "fighting": "Luta", "poison": "Veneno", "ground": "Terra",
+    "flying": "Voador", "psychic": "Psíquico", "bug": "Inseto",
+    "rock": "Pedra", "ghost": "Fantasma", "dragon": "Dragão",
+    "dark": "Sombrio", "steel": "Aço", "fairy": "Fada"
 }
 
-# Tradução das estatísticas
 TRANSLATE_STATS = {
-    "HP": "PV",
+    "HP": "HP",
     "ATTACK": "Ataque",
     "DEFENSE": "Defesa",
     "SP. ATTACK": "Atq. Esp.",
@@ -80,41 +68,51 @@ TRANSLATE_STATS = {
     "SPEED": "Velocidade"
 }
 
+MAX_STATS = {
+    "HP": 255, "ATTACK": 190, "DEFENSE": 230,
+    "SP. ATTACK": 194, "SP. DEFENSE": 230, "SPEED": 180
+}
+
 # ============================================================
-# ESTILIZAÇÃO CSS GLOBAL (FULLSCREEN TOTAL SEM BORDAS)
+# ESTILIZAÇÃO CSS GLOBAL (FUNDO FLORESTA DE GRAMA)
 # ============================================================
 
-st.markdown("""
+st.markdown(f"""
 <style>
-    /* Oculta completamente elementos nativos do Streamlit */
-    header[data-testid="stHeader"], footer, #MainMenu {
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@600;800;900&display=swap');
+
+    header[data-testid="stHeader"], footer, #MainMenu {{
         display: none !important;
         visibility: hidden !important;
-    }
+    }}
 
-    html, body, .stAppViewContainer, .stApp {
+    html, body, .stAppViewContainer, .stApp {{
         margin: 0 !important;
         padding: 0 !important;
-        background-color: #121214 !important;
-        overflow: hidden !important;
-    }
+        background-image: url('{bg_css_url}') !important;
+        background-size: cover !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+        background-attachment: fixed !important;
+        font-family: 'Outfit', sans-serif !important;
+        overflow-x: hidden !important;
+    }}
     
-    .stMainBlockContainer, .block-container {
-        padding: 0rem !important;
-        max-width: 100% !important;
-    }
+    .stMainBlockContainer, .block-container {{
+        padding: 20px 0rem !important;
+        max-width: 700px !important;
+        margin: 0 auto !important;
+    }}
 
-    /* Esconde o botão acionador nativo que escuta o fechamento */
     div[data-element-id="stElementContainer"]:has(button[key="hidden_close_btn"]),
-    div:has(> button[key="hidden_close_btn"]) {
+    div:has(> button[key="hidden_close_btn"]) {{
         display: none !important;
         height: 0px !important;
         margin: 0px !important;
         padding: 0px !important;
-    }
+    }}
 
-    /* Força o iframe a preencher 100% da altura da tela sem barras pretas */
-    iframe {
+    iframe {{
         border: none !important;
         width: 100vw !important;
         height: 100vh !important;
@@ -122,7 +120,185 @@ st.markdown("""
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
-    }
+    }}
+
+    /* CARD RETRO COMPLETO DA POKÉDEX (TELA 1) */
+    .retro-pokedex-frame {{
+        background-color: #ff3b30;
+        border: 4px solid #000000;
+        border-radius: 24px;
+        padding: 20px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+        position: relative;
+    }}
+
+    .retro-top-bar {{
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        position: relative;
+        padding-bottom: 15px;
+        border-bottom: 4px solid #000000;
+        margin-bottom: 20px;
+    }}
+
+    .retro-big-lens {{
+        width: 65px;
+        height: 65px;
+        background: radial-gradient(circle at 35% 35%, #00e5ff 0%, #0088cc 60%, #003366 100%);
+        border-radius: 50%;
+        border: 4px solid #000000;
+        box-shadow: inset 0 0 10px rgba(255,255,255,0.8);
+    }}
+
+    .retro-title-area {{
+        text-align: right;
+    }}
+
+    .retro-pokedex-title {{
+        font-family: 'Press Start 2P', cursive;
+        font-size: 1rem;
+        color: #000000;
+        margin: 0;
+        line-height: 1.4;
+        text-transform: uppercase;
+    }}
+
+    .retro-pokeball-icon {{
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(#ff3b30 50%, #ffffff 50%);
+        border: 3px solid #000000;
+        border-radius: 50%;
+        display: inline-block;
+        position: relative;
+        margin-left: 8px;
+        vertical-align: middle;
+    }}
+    .retro-pokeball-icon::after {{
+        content: '';
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: 10px; height: 10px;
+        background: #ffffff;
+        border: 2px solid #000000;
+        border-radius: 50%;
+    }}
+
+    /* TELA CENTRAL BRANCA COM MOLDURA PRETA */
+    div[data-testid="stTabs"] {{
+        background: #ffffff !important;
+        border: 4px solid #000000 !important;
+        border-radius: 12px !important;
+        padding: 15px !important;
+        box-shadow: inset 0 0 8px rgba(0,0,0,0.2) !important;
+    }}
+
+    div[data-testid="stTabHeaderList"] {{
+        border-bottom: 3px solid #000000 !important;
+        padding-bottom: 6px !important;
+        gap: 8px !important;
+    }}
+
+    button[data-baseweb="tab"] {{
+        background-color: #e0e0e0 !important;
+        color: #000000 !important;
+        border-radius: 6px !important;
+        font-family: 'Press Start 2P', cursive !important;
+        font-size: 0.65rem !important;
+        padding: 8px 12px !important;
+        border: 2px solid #000000 !important;
+    }}
+
+    button[data-baseweb="tab"][aria-selected="true"] {{
+        background-color: #8bac0f !important;
+        color: #0f380f !important;
+    }}
+
+    div[data-testid="stFileUploadDropzone"] {{
+        background-color: #f8f9fa !important;
+        border: 2px dashed #000000 !important;
+        border-radius: 8px !important;
+    }}
+
+    /* PAINEL INFERIOR RETRO */
+    .retro-bottom-panel {{
+        margin-top: 20px;
+        background-color: #4a4a4a;
+        border: 4px solid #000000;
+        border-radius: 12px;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }}
+
+    .retro-name-type-bar {{
+        background-color: #8bac0f;
+        border: 3px solid #000000;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-family: 'Press Start 2P', cursive;
+        font-size: 0.75rem;
+        color: #0f380f;
+        display: flex;
+        justify-content: space-between;
+    }}
+
+    .retro-controls-row {{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }}
+
+    .retro-dpad {{
+        width: 60px;
+        height: 60px;
+        position: relative;
+    }}
+    .retro-dpad-cross {{
+        background: #222222;
+        border: 2px solid #000000;
+        position: absolute;
+    }}
+    .retro-dpad-v {{ width: 20px; height: 60px; left: 20px; top: 0; border-radius: 4px; }}
+    .retro-dpad-h {{ width: 60px; height: 20px; left: 0; top: 20px; border-radius: 4px; }}
+
+    .retro-screen-desc {{
+        background-color: #9bbc0f;
+        border: 3px solid #000000;
+        border-radius: 8px;
+        padding: 10px;
+        font-family: 'Press Start 2P', cursive;
+        font-size: 0.65rem;
+        color: #0f380f;
+        text-align: center;
+        flex: 1;
+        margin: 0 15px;
+        line-height: 1.4;
+    }}
+
+    .retro-action-btns {{
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }}
+
+    .retro-btn-circle {{
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 2px solid #000000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Press Start 2P', cursive;
+        font-size: 0.6rem;
+        font-weight: bold;
+    }}
+    .btn-red {{ background-color: #ff3b30; color: #ffffff; }}
+    .btn-green {{ background-color: #4cd964; color: #000000; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -148,23 +324,12 @@ def clean_pokemon_name(raw_name):
 
 
 def translate_pokedex_text(text):
-    """Tradução simples para termos e frases recorrentes da Pokédex em inglês."""
     if not text:
         return "Um Pokémon fascinante registrado na Pokédex oficial."
     
     replacements = {
         "It ": "Ele ", "Its ": "Seu ", "They ": "Eles ",
-        "When it ": "Quando ele ", "If it ": "Se ele ",
-        "is said to": "dizem ser capaz de",
-        "has a": "possui um(a)",
-        "in the": "no(a)",
-        "with its": "com seu(sua)",
-        "to protect itself": "para se proteger",
-        "body": "corpo",
-        "fire": "fogo",
-        "water": "água",
-        "tail": "cauda",
-        "head": "cabeça"
+        "When it ": "Quando ele ", "If it ": "Se ele "
     }
     
     translated = text
@@ -185,7 +350,6 @@ def fetch_pokeapi_data(raw_pokemon_name):
             data = response.json()
             stats_map = {s["stat"]["name"]: s["base_stat"] for s in data["stats"]}
             
-            # Fraquezas
             weaknesses = set()
             for t in data["types"]:
                 type_url = t["type"]["url"]
@@ -195,7 +359,6 @@ def fetch_pokeapi_data(raw_pokemon_name):
                     for double_damage in damage_rel["double_damage_from"]:
                         weaknesses.add(double_damage["name"])
 
-            # Localização
             encounters_url = data["location_area_encounters"]
             encounters_resp = requests.get(encounters_url, timeout=3)
             locations = []
@@ -205,9 +368,8 @@ def fetch_pokeapi_data(raw_pokemon_name):
                     loc_name = enc["location_area"]["name"].replace("-", " ").title()
                     locations.append(loc_name)
             
-            location_text = ", ".join(locations) if locations else "Inicial / Evolução / Evento"
+            location_text = ", ".join(locations) if locations else "Inicial / Evolução"
 
-            # Texto da Pokédex
             species_url = data["species"]["url"]
             species_resp = requests.get(species_url, timeout=3)
             pokedex_entry = "Um Pokémon fascinante registrado na Pokédex oficial."
@@ -247,16 +409,16 @@ def fetch_pokeapi_data(raw_pokemon_name):
         pass
 
     return {
-        "id": 52,
+        "id": 4,
         "name": pokemon_name.capitalize(),
-        "height": 0.4,
-        "weight": 4.2,
-        "types": ["normal"],
-        "weaknesses": ["fighting"],
-        "location": "Rota 5 e Rota 6 de Kanto",
-        "pokedex_entry": "Ele adora objetos brilhantes. Quando encontra algo reluzente, suas moedas e olhos brilham intensamente.",
-        "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/52.png",
-        "stats": {"HP": 40, "ATTACK": 45, "DEFENSE": 35, "SP. ATTACK": 40, "SP. DEFENSE": 40, "SPEED": 90}
+        "height": 0.6,
+        "weight": 8.5,
+        "types": ["fire"],
+        "weaknesses": ["water", "ground", "rock"],
+        "location": "Rota 3 e Kanto",
+        "pokedex_entry": "A chama que queima na ponta de sua cauda indica sua força vital.",
+        "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/4.png",
+        "stats": {"HP": 39, "ATTACK": 52, "DEFENSE": 43, "SP. ATTACK": 60, "SP. DEFENSE": 50, "SPEED": 65}
     }
 
 
@@ -312,27 +474,54 @@ if "current_view" not in st.session_state:
 
 
 # ============================================================
-# TELA 1: CÂMERA / UPLOAD (TELA INICIAL)
+# TELA 1: CÂMERA / UPLOAD (MOLDURA POKÉDEX CLASSIC)
 # ============================================================
 
 if st.session_state.current_view == "input":
-    st.markdown('<div style="padding: 40px 60px;">', unsafe_allow_html=True)
-    st.title("PokéVision")
-    st.subheader("Reconhecimento de Pokémon com Inteligência Artificial")
-    st.write("Tire uma foto ou envie uma imagem de um Pokémon para identificá-lo.")
+    st.markdown("""
+        <div class="retro-pokedex-frame">
+            <div class="retro-top-bar">
+                <div class="retro-big-lens"></div>
+                <div class="retro-title-area">
+                    <span class="retro-pokedex-title">POKÉDEX OF<br>ANOMALIES</span>
+                    <div class="retro-pokeball-icon"></div>
+                </div>
+            </div>
+    """, unsafe_allow_html=True)
 
-    st.divider()
-
-    col_cam, col_up = st.tabs(["Câmera", "Upload"])
+    col_cam, col_up = st.tabs(["📷 CÂMERA", "🖼️ UPLOAD"])
 
     camera_image = None
     uploaded_image = None
 
     with col_cam:
-        camera_image = st.camera_input("Centralize o Pokémon e tire uma foto")
+        camera_image = st.camera_input("Centralize o Pokémon")
 
     with col_up:
-        uploaded_image = st.file_uploader("Escolha uma imagem", type=["jpg", "jpeg", "png"])
+        uploaded_image = st.file_uploader("Selecione a imagem do Pokémon", type=["jpg", "jpeg", "png"])
+
+    st.markdown("""
+            <div class="retro-bottom-panel">
+                <div class="retro-name-type-bar">
+                    <span>NOME DO POKEMON</span>
+                    <span>TIPO(S)</span>
+                </div>
+                <div class="retro-controls-row">
+                    <div class="retro-dpad">
+                        <div class="retro-dpad-cross retro-dpad-v"></div>
+                        <div class="retro-dpad-cross retro-dpad-h"></div>
+                    </div>
+                    <div class="retro-screen-desc">
+                        APONTE A CÂMERA OU ENVIE UMA FOTO PARA IDENTIFICAR O POKÉMON!
+                    </div>
+                    <div class="retro-action-btns">
+                        <div class="retro-btn-circle btn-red">X</div>
+                        <div class="retro-btn-circle btn-green">✓</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
     image_source = camera_image if camera_image is not None else uploaded_image
 
@@ -340,54 +529,62 @@ if st.session_state.current_view == "input":
         st.session_state.image_source = image_source
         st.session_state.current_view = "card"
         st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ============================================================
-# TELA 2: CARD FULLSCREEN 100% TELA CHEIA E GIRO FLUIDO
+# TELA 2: CARD SOBRE O FUNDO DA FLORESTA
 # ============================================================
 
 elif st.session_state.current_view == "card":
     
-    # Gatilho oculto para o evento de fechamento
     if st.button("close_trigger", key="hidden_close_btn"):
         st.session_state.current_view = "input"
         st.rerun()
 
     pil_image = Image.open(st.session_state.image_source).convert("RGB")
 
-    with st.spinner("🔍 Analisando Pokémon e carregando dados..."):
+    with st.spinner("🔍 Analisando Pokémon..."):
         results = predict(pil_image)
         best = results[0]
         poke_data = fetch_pokeapi_data(best["name"])
 
-    primary_type = poke_data["types"][0].lower() if poke_data["types"] else "normal"
-    card_bg_color = TYPE_COLORS.get(primary_type, "#7B78B5")
+    primary_type = poke_data["types"][0].lower() if poke_data["types"] else "grass"
+    card_theme_color = TYPE_COLORS.get(primary_type, "#fb6c6c")
 
     type_badges_html = ""
     for t in poke_data["types"]:
-        bg_color = TYPE_COLORS.get(t.lower(), "#777777")
         translated_type = TRANSLATE_TYPES.get(t.lower(), t.capitalize())
-        type_badges_html += f'<div class="type-badge-circle" style="background-color: {bg_color};">{translated_type}</div>'
+        type_badges_html += f'<span class="type-badge">{translated_type}</span>'
 
-    weakness_badges_html = ""
-    for w in poke_data["weaknesses"]:
-        w_color = TYPE_COLORS.get(w.lower(), "#555555")
-        translated_weakness = TRANSLATE_TYPES.get(w.lower(), w.capitalize())
-        weakness_badges_html += f'<span class="weakness-badge" style="background-color: {w_color};">{translated_weakness}</span>'
-
-    stats_html = ""
-    for stat_name, stat_val in poke_data["stats"].items():
-        translated_stat = TRANSLATE_STATS.get(stat_name, stat_name)
-        stats_html += f'<div class="stat-pill"><span>{translated_stat}</span><span>{stat_val}</span></div>'
-
-    art_html = f'<img src="{poke_data["image_url"]}" class="card-art-img">' if poke_data["image_url"] else ''
+    stats_bars_html = ""
+    total_stats = sum(poke_data["stats"].values())
+    
+    for stat_key, stat_val in poke_data["stats"].items():
+        translated_stat = TRANSLATE_STATS.get(stat_key, stat_key)
+        max_val = MAX_STATS.get(stat_key, 200)
+        percentage = min(int((stat_val / max_val) * 100), 100)
+        bar_color = "#48d0b0" if percentage >= 50 else "#fb6c6c"
+        
+        stats_bars_html += f"""
+        <div class="stat-row">
+            <span class="stat-label">{translated_stat}</span>
+            <span class="stat-value">{stat_val}</span>
+            <div class="stat-bar-bg">
+                <div class="stat-bar-fill" style="width: {percentage}%; background-color: {bar_color};"></div>
+            </div>
+        </div>
+        """
 
     top5_html = ""
     for i, result in enumerate(results, start=1):
         clean_name = clean_pokemon_name(result["name"]).capitalize()
         percentage = result["confidence"] * 100
-        top5_html += f'<div class="prob-bar-box"><span>{i}. {clean_name}</span><span>{percentage:.2f}%</span></div>'
+        top5_html += f"""
+        <div class="prob-row">
+            <span>{i}. {clean_name}</span>
+            <span style="font-weight: 700;">{percentage:.1f}%</span>
+        </div>
+        """
 
     component_code = f"""
     <!DOCTYPE html>
@@ -398,255 +595,347 @@ elif st.session_state.current_view == "card":
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }}
         html, body {{
             width: 100vw;
             height: 100vh;
             overflow: hidden;
-            background-color: #121214;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-image: url('{bg_css_url}');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }}
-        .flip-scene {{
-            width: 100vw;
-            height: 100vh;
-            perspective: 1200px;
-        }}
-        .flip-card {{
-            width: 100%;
-            height: 100%;
+        
+        .pokedex-app-container {{
+            width: 95%;
+            max-width: 780px;
+            height: 88vh;
+            max-height: 820px;
+            background-color: {card_theme_color};
+            border-radius: 32px;
             position: relative;
-            transform-style: preserve-3d;
-            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }}
-        .flip-card.is-flipped {{
-            transform: rotateY(180deg);
-        }}
-        .card-face {{
-            position: absolute;
-            width: 100vw;
-            height: 100vh;
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
-            padding: 30px 50px 20px 50px;
-            color: white;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
         }}
-        .card-face-back {{
-            transform: rotateY(180deg);
+
+        .pokeball-watermark {{
+            position: absolute;
+            right: -60px;
+            top: 40px;
+            width: 280px;
+            height: 280px;
+            opacity: 0.15;
+            background: radial-gradient(circle, transparent 40%, #ffffff 40%, #ffffff 50%, transparent 50%),
+                        linear-gradient(#ffffff 45%, transparent 45%, transparent 55%, #ffffff 55%);
+            border-radius: 50%;
+            pointer-events: none;
         }}
-        .card-top-bar {{
+
+        .app-header {{
+            padding: 24px 32px 10px 32px;
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
+            color: white;
+            z-index: 10;
         }}
-        .card-poke-id {{
+        
+        .back-btn {{
+            background: rgba(255, 255, 255, 0.22);
+            border: none;
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+            transition: background 0.2s;
+        }}
+
+        .back-btn:hover {{
+            background: rgba(255, 255, 255, 0.4);
+        }}
+
+        .poke-title-section {{
+            padding: 0 32px;
+            color: white;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }}
+
+        .poke-name {{
+            font-size: 2.6rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+        }}
+
+        .poke-id {{
             font-size: 1.3rem;
             font-weight: 700;
             opacity: 0.85;
         }}
-        .card-poke-name {{
-            font-size: 3.4rem;
-            font-weight: 800;
-            margin: 0;
-            text-transform: capitalize;
-            line-height: 1.1;
+
+        .type-badges-container {{
+            display: flex;
+            gap: 10px;
+            margin-top: 6px;
         }}
-        .card-poke-meta {{
-            font-size: 0.95rem;
-            opacity: 0.95;
-            margin-top: 8px;
-            line-height: 1.5;
-        }}
-        .type-badge-circle {{
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 8px 20px;
-            border-radius: 25px;
+
+        .type-badge {{
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(8px);
             color: white;
-            font-weight: 800;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            margin-left: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            border: 2px solid rgba(255, 255, 255, 0.4);
-        }}
-        .weakness-badge {{
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            margin-right: 5px;
-            margin-top: 3px;
-            color: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }}
-        .card-body-grid {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 40px;
-            flex: 1;
-            margin-top: 10px;
-            margin-bottom: 10px;
-        }}
-        .card-art-box {{
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100%;
-        }}
-        .card-art-img {{
-            max-height: 52vh;
-            max-width: 100%;
-            width: auto;
-            height: auto;
-            object-fit: contain;
-            filter: drop-shadow(0 12px 20px rgba(0,0,0,0.35));
-        }}
-        .card-stats-box {{
-            flex: 1.1;
-        }}
-        .stats-title {{
-            font-size: 1.4rem;
-            font-weight: 800;
-            margin-bottom: 10px;
-        }}
-        .stat-pill {{
-            background: #FFFFFF;
-            color: #2D3748;
-            border-radius: 12px;
-            padding: 8px 18px;
-            margin: 6px 0;
-            font-size: 0.95rem;
-            font-weight: 800;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
-        }}
-        .embedded-btn {{
-            background-color: rgba(0, 0, 0, 0.25);
-            color: white !important;
-            border: 1px solid rgba(255, 255, 255, 0.4);
+            padding: 6px 18px;
             border-radius: 20px;
-            padding: 8px 20px;
+            font-size: 0.9rem;
             font-weight: 700;
-            font-size: 0.88rem;
-            cursor: pointer;
-            backdrop-filter: blur(5px);
-            transition: all 0.2s ease-in-out;
-            text-decoration: none !important;
-            display: inline-block;
+            text-transform: capitalize;
         }}
-        .embedded-btn:hover {{
-            background-color: rgba(0, 0, 0, 0.5);
-            border-color: white;
-            transform: scale(1.03);
+
+        .artwork-container {{
+            width: 100%;
+            height: 270px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 20;
+            margin-top: 0px;
         }}
-        .pokedex-quote-box {{
-            background: rgba(255, 255, 255, 0.12);
-            border-left: 6px solid #FFFFFF;
-            border-radius: 14px;
-            padding: 20px 25px;
-            font-size: 1.2rem;
-            line-height: 1.6;
-            font-style: italic;
-            margin-bottom: 20px;
-            backdrop-filter: blur(5px);
+
+        .artwork-img {{
+            max-height: 290px;
+            max-width: 85%;
+            object-fit: contain;
+            filter: drop-shadow(0 16px 20px rgba(0,0,0,0.32));
+            transition: transform 0.3s ease;
         }}
-        .prob-bar-box {{
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 12px;
-            padding: 8px 16px;
-            margin: 5px 0;
+
+        .sheet-container {{
+            flex: 1;
+            background: white;
+            border-top-left-radius: 36px;
+            border-top-right-radius: 36px;
+            padding: 40px 32px 24px 32px;
+            margin-top: -35px;
+            z-index: 15;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }}
+
+        .sheet-tabs {{
             display: flex;
             justify-content: space-between;
+            border-bottom: 2px solid #f0f0f5;
+            padding-bottom: 12px;
+            margin-bottom: 22px;
+        }}
+
+        .tab-item {{
+            font-size: 1rem;
             font-weight: 700;
+            color: #8e8e93;
+            cursor: pointer;
+            position: relative;
+            padding: 6px 0;
+            transition: color 0.2s ease;
+        }}
+
+        .tab-item.active {{
+            color: #1c1c1e;
+        }}
+
+        .tab-item.active::after {{
+            content: '';
+            position: absolute;
+            bottom: -14px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: #6c5ce7;
+            border-radius: 3px;
+        }}
+
+        .tab-page {{
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }}
+
+        .tab-page.active {{
+            display: block;
+        }}
+
+        .about-row {{
+            display: flex;
+            margin-bottom: 14px;
+            font-size: 1rem;
+        }}
+
+        .about-label {{
+            width: 130px;
+            color: #8e8e93;
+            font-weight: 600;
+        }}
+
+        .about-value {{
+            color: #2c3e50;
+            font-weight: 700;
+            flex: 1;
+        }}
+
+        .stat-row {{
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
             font-size: 0.95rem;
         }}
-        .card-footer-nav {{
-            text-align: center;
-            padding-bottom: 10px;
+
+        .stat-label {{
+            width: 110px;
+            color: #8e8e93;
+            font-weight: 700;
+        }}
+
+        .stat-value {{
+            width: 50px;
+            font-weight: 800;
+            color: #2c3e50;
+        }}
+
+        .stat-bar-bg {{
+            flex: 1;
+            height: 8px;
+            background-color: #f0f0f5;
+            border-radius: 10px;
+            overflow: hidden;
+        }}
+
+        .stat-bar-fill {{
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.6s ease;
+        }}
+
+        .pokedex-quote {{
+            background: #f8f9fa;
+            border-left: 5px solid {card_theme_color};
+            padding: 16px 20px;
+            border-radius: 10px;
+            font-style: italic;
+            color: #4a5568;
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }}
+
+        .prob-row {{
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 16px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            color: #2d3748;
+        }}
+
+        @keyframes fadeIn {{
+            from {{ opacity: 0; transform: translateY(6px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
         }}
     </style>
     </head>
     <body>
 
-    <div class="flip-scene">
-        <div class="flip-card" id="poke3DCard">
-            
-            <!-- LADO FRENTE (ESTATÍSTICAS) -->
-            <div class="card-face" style="background: linear-gradient(135deg, {card_bg_color} 0%, rgba(0,0,0,0.3) 100%), {card_bg_color};">
-                <div class="card-top-bar">
-                    <div>
-                        <div class="card-poke-id">#{poke_data['id']:03d}</div>
-                        <div class="card-poke-name">{poke_data['name']}</div>
-                        <div class="card-poke-meta">
-                            <b>Altura:</b> {poke_data['height']} m &nbsp;|&nbsp; <b>Peso:</b> {poke_data['weight']} kg<br>
-                            <b>Locais:</b> {poke_data['location']}<br>
-                            <b>Fraquezas:</b> {weakness_badges_html}
-                        </div>
-                    </div>
-                    <div style="display: flex; align-items: center;">
-                        {type_badges_html}
-                        <button onclick="closeCard()" class="embedded-btn" style="margin-left: 15px;">✖ Fechar</button>
-                    </div>
-                </div>
-                <div class="card-body-grid">
-                    <div class="card-art-box">{art_html}</div>
-                    <div class="card-stats-box">
-                        <div class="stats-title">Estatísticas Base:</div>
-                        {stats_html}
-                    </div>
-                </div>
-                <div class="card-footer-nav">
-                    <button onclick="flipCard()" class="embedded-btn"> Ver Pokédex & Precisão</button>
+    <div class="pokedex-app-container">
+        <div class="pokeball-watermark"></div>
+
+        <div class="app-header">
+            <button class="back-btn" onclick="closeCard()">←</button>
+            <span style="font-weight: 700; font-size: 1.1rem; opacity: 0.9;">PokéVision UI</span>
+            <span style="font-size: 20px;">♡</span>
+        </div>
+
+        <div class="poke-title-section">
+            <div>
+                <div class="poke-name">{poke_data['name']}</div>
+                <div class="type-badges-container">
+                    {type_badges_html}
                 </div>
             </div>
-            
-            <!-- LADO VERSO (POKÉDEX & PRECISÃO IA) -->
-            <div class="card-face card-face-back" style="background: linear-gradient(135deg, {card_bg_color} 0%, rgba(0,0,0,0.3) 100%), {card_bg_color};">
-                <div class="card-top-bar">
-                    <div>
-                        <div class="card-poke-id">#{poke_data['id']:03d}</div>
-                        <div class="card-poke-name">{poke_data['name']}</div>
-                        <div class="card-poke-meta">
-                            <b>Altura:</b> {poke_data['height']} m &nbsp;|&nbsp; <b>Peso:</b> {poke_data['weight']} kg<br>
-                            <b>Locais:</b> {poke_data['location']}<br>
-                            <b>Fraquezas:</b> {weakness_badges_html}
-                        </div>
-                    </div>
-                    <div style="display: flex; align-items: center;">
-                        {type_badges_html}
-                        <button onclick="closeCard()" class="embedded-btn" style="margin-left: 15px;">✖ Fechar</button>
-                    </div>
+            <div class="poke-id">#{poke_data['id']:03d}</div>
+        </div>
+
+        <div class="artwork-container">
+            <img src="{poke_data['image_url']}" class="artwork-img" alt="{poke_data['name']}">
+        </div>
+
+        <div class="sheet-container">
+            <div class="sheet-tabs">
+                <span class="tab-item active" onclick="switchTab('about', this)">Sobre</span>
+                <span class="tab-item" onclick="switchTab('stats', this)">Estatísticas</span>
+                <span class="tab-item" onclick="switchTab('pokedex', this)">Pokédex</span>
+                <span class="tab-item" onclick="switchTab('ia', this)">Precisão IA</span>
+            </div>
+
+            <div id="tab-about" class="tab-page active">
+                <div class="about-row">
+                    <span class="about-label">Altura</span>
+                    <span class="about-value">{poke_data['height']} m</span>
                 </div>
-                <div style="flex: 1; margin-top: 15px; display: flex; flex-direction: column; justify-content: center; padding-bottom: 20px;">
-                    <div class="stats-title"> Registro Oficial da Pokédex:</div>
-                    <div class="pokedex-quote-box">"{poke_data['pokedex_entry']}"</div>
-                    <div class="stats-title"> Precisão da Identificação (IA):</div>
-                    <div>{top5_html}</div>
+                <div class="about-row">
+                    <span class="about-label">Peso</span>
+                    <span class="about-value">{poke_data['weight']} kg</span>
                 </div>
-                <div class="card-footer-nav">
-                    <button onclick="flipCard()" class="embedded-btn"> Voltar para Estatísticas</button>
+                <div class="about-row">
+                    <span class="about-label">Localização</span>
+                    <span class="about-value">{poke_data['location']}</span>
+                </div>
+                <div class="about-row">
+                    <span class="about-label">Fraquezas</span>
+                    <span class="about-value" style="text-transform: capitalize;">{", ".join(poke_data['weaknesses'])}</span>
                 </div>
             </div>
-            
+
+            <div id="tab-stats" class="tab-page">
+                {stats_bars_html}
+                <div class="stat-row" style="margin-top: 15px; border-top: 1px solid #f0f0f5; padding-top: 10px;">
+                    <span class="stat-label">Total Base</span>
+                    <span class="stat-value" style="color: #6c5ce7;">{total_stats}</span>
+                </div>
+            </div>
+
+            <div id="tab-pokedex" class="tab-page">
+                <div class="pokedex-quote">"{poke_data['pokedex_entry']}"</div>
+            </div>
+
+            <div id="tab-ia" class="tab-page">
+                <div style="font-weight: 700; color: #8e8e93; font-size: 0.85rem; margin-bottom: 10px;">TOP PREDIÇÕES DA IA</div>
+                {top5_html}
+            </div>
         </div>
     </div>
 
     <script>
-        function flipCard() {{
-            var card = document.getElementById('poke3DCard');
-            if (card) {{
-                card.classList.toggle('is-flipped');
-            }}
+        function switchTab(tabName, element) {{
+            document.querySelectorAll('.tab-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-page').forEach(el => el.classList.remove('active'));
+            
+            element.classList.add('active');
+            document.getElementById('tab-' + tabName).classList.add('active');
         }}
 
         function closeCard() {{
