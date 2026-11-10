@@ -18,9 +18,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 MODEL_PATH = BASE_DIR / "model" / "pokemon_model_v2.keras"
 CLASS_NAMES_PATH = BASE_DIR / "model" / "class_names.json"
 
-# Imagem de Fundo (Se estiver na mesma pasta ou na pasta assets)
-BACKGROUND_IMAGE_PATH = BASE_DIR / "assets" / "image" / "fundo_floresta.jpg"
-
 ICON_URL = "https://img.icons8.com/?size=100&id=45658&format=png&color=000000"
 
 st.set_page_config(
@@ -30,15 +27,33 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Função para converter imagem local para Base64 (para uso direto no CSS/HTML)
-def get_image_base64(image_path):
-    if Path(image_path).exists():
-        with open(image_path, "rb") as img_file:
-            return base64.b64encode(img_file.read()).decode()
+# Busca pelo nome exato do GitHub: fundo_floresta.jpg
+def load_bg_base64():
+    possible_names = [
+        "fundo_floresta.jpg", "fundo_floresta.png", "fundo_floresta.jpeg",
+        "floresta_fundo.jpg", "floresta_FUNDO.jpg", "fundo_grama.jpg"
+    ]
+    possible_folders = [
+        BASE_DIR / "assets" / "image",
+        BASE_DIR / "assets",
+        Path(__file__).resolve().parent / "assets" / "image",
+        Path(__file__).resolve().parent / "assets"
+    ]
+    
+    for folder in possible_folders:
+        for name in possible_names:
+            path = folder / name
+            if path.exists():
+                with open(path, "rb") as img_file:
+                    encoded = base64.b64encode(img_file.read()).decode()
+                    ext = path.suffix.lower().replace(".", "")
+                    if ext == "jpg":
+                        ext = "jpeg"
+                    return f"data:image/{ext};base64,{encoded}"
+    
     return ""
 
-bg_base64 = get_image_base64(BACKGROUND_IMAGE_PATH)
-bg_css_url = f"data:image/jpeg;base64,{bg_base64}" if bg_base64 else "https://i.imgur.com/8QzX9ZW.jpg"
+bg_css_url = load_bg_base64()
 
 # Cores por Tipo
 TYPE_COLORS = {
@@ -74,12 +89,13 @@ MAX_STATS = {
 }
 
 # ============================================================
-# ESTILIZAÇÃO CSS GLOBAL (FUNDO FLORESTA DE GRAMA)
+# ESTILIZAÇÃO CSS GLOBAL (BOOTSTRAP ICONS + RETRO)
 # ============================================================
 
 st.markdown(f"""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@600;800;900&display=swap');
+    @import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css');
 
     header[data-testid="stHeader"], footer, #MainMenu {{
         display: none !important;
@@ -91,7 +107,7 @@ st.markdown(f"""
         padding: 0 !important;
         background-image: url('{bg_css_url}') !important;
         background-size: cover !important;
-        background-position: center !important;
+        background-position: center center !important;
         background-repeat: no-repeat !important;
         background-attachment: fixed !important;
         font-family: 'Outfit', sans-serif !important;
@@ -100,7 +116,7 @@ st.markdown(f"""
     
     .stMainBlockContainer, .block-container {{
         padding: 20px 0rem !important;
-        max-width: 700px !important;
+        max-width: 620px !important;
         margin: 0 auto !important;
     }}
 
@@ -122,7 +138,7 @@ st.markdown(f"""
         left: 0 !important;
     }}
 
-    /* CARD RETRO COMPLETO DA POKÉDEX (TELA 1) */
+    /* ESTRUTURA DA POKÉDEX */
     .retro-pokedex-frame {{
         background-color: #ff3b30;
         border: 4px solid #000000;
@@ -135,16 +151,15 @@ st.markdown(f"""
     .retro-top-bar {{
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
-        position: relative;
-        padding-bottom: 15px;
+        align-items: center;
+        padding-bottom: 12px;
         border-bottom: 4px solid #000000;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
     }}
 
     .retro-big-lens {{
-        width: 65px;
-        height: 65px;
+        width: 55px;
+        height: 55px;
         background: radial-gradient(circle at 35% 35%, #00e5ff 0%, #0088cc 60%, #003366 100%);
         border-radius: 50%;
         border: 4px solid #000000;
@@ -152,53 +167,52 @@ st.markdown(f"""
     }}
 
     .retro-title-area {{
-        text-align: right;
+        display: flex;
+        align-items: center;
+        gap: 10px;
     }}
 
     .retro-pokedex-title {{
         font-family: 'Press Start 2P', cursive;
-        font-size: 1rem;
+        font-size: 1.1rem;
         color: #000000;
         margin: 0;
-        line-height: 1.4;
         text-transform: uppercase;
     }}
 
     .retro-pokeball-icon {{
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 30px;
         background: linear-gradient(#ff3b30 50%, #ffffff 50%);
         border: 3px solid #000000;
         border-radius: 50%;
         display: inline-block;
         position: relative;
-        margin-left: 8px;
-        vertical-align: middle;
     }}
     .retro-pokeball-icon::after {{
         content: '';
         position: absolute;
         top: 50%; left: 50%;
         transform: translate(-50%, -50%);
-        width: 10px; height: 10px;
+        width: 8px; height: 8px;
         background: #ffffff;
         border: 2px solid #000000;
         border-radius: 50%;
     }}
 
-    /* TELA CENTRAL BRANCA COM MOLDURA PRETA */
+    /* TELA CENTRAL DA CÂMERA / UPLOAD */
     div[data-testid="stTabs"] {{
         background: #ffffff !important;
         border: 4px solid #000000 !important;
-        border-radius: 12px !important;
-        padding: 15px !important;
-        box-shadow: inset 0 0 8px rgba(0,0,0,0.2) !important;
+        border-radius: 14px !important;
+        padding: 12px !important;
+        box-shadow: inset 0 0 8px rgba(0,0,0,0.15) !important;
     }}
 
     div[data-testid="stTabHeaderList"] {{
         border-bottom: 3px solid #000000 !important;
-        padding-bottom: 6px !important;
-        gap: 8px !important;
+        padding-bottom: 4px !important;
+        gap: 6px !important;
     }}
 
     button[data-baseweb="tab"] {{
@@ -222,25 +236,36 @@ st.markdown(f"""
         border-radius: 8px !important;
     }}
 
+    div[data-testid="stCameraInput"] button {{
+        background-color: #ff3b30 !important;
+        color: white !important;
+        font-family: 'Press Start 2P', cursive !important;
+        font-size: 0.7rem !important;
+        border: 3px solid #000000 !important;
+        border-radius: 8px !important;
+        padding: 8px 16px !important;
+        box-shadow: 0 4px 0px #000000 !important;
+    }}
+
     /* PAINEL INFERIOR RETRO */
     .retro-bottom-panel {{
-        margin-top: 20px;
+        margin-top: 16px;
         background-color: #4a4a4a;
         border: 4px solid #000000;
         border-radius: 12px;
-        padding: 15px;
+        padding: 14px;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
     }}
 
     .retro-name-type-bar {{
         background-color: #8bac0f;
         border: 3px solid #000000;
-        border-radius: 8px;
-        padding: 8px 12px;
+        border-radius: 6px;
+        padding: 6px 12px;
         font-family: 'Press Start 2P', cursive;
-        font-size: 0.75rem;
+        font-size: 0.68rem;
         color: #0f380f;
         display: flex;
         justify-content: space-between;
@@ -253,48 +278,50 @@ st.markdown(f"""
     }}
 
     .retro-dpad {{
-        width: 60px;
-        height: 60px;
+        width: 50px;
+        height: 50px;
         position: relative;
+        flex-shrink: 0;
     }}
     .retro-dpad-cross {{
         background: #222222;
         border: 2px solid #000000;
         position: absolute;
     }}
-    .retro-dpad-v {{ width: 20px; height: 60px; left: 20px; top: 0; border-radius: 4px; }}
-    .retro-dpad-h {{ width: 60px; height: 20px; left: 0; top: 20px; border-radius: 4px; }}
+    .retro-dpad-v {{ width: 16px; height: 50px; left: 17px; top: 0; border-radius: 3px; }}
+    .retro-dpad-h {{ width: 50px; height: 16px; left: 0; top: 17px; border-radius: 3px; }}
 
     .retro-screen-desc {{
         background-color: #9bbc0f;
         border: 3px solid #000000;
-        border-radius: 8px;
-        padding: 10px;
+        border-radius: 6px;
+        padding: 8px;
         font-family: 'Press Start 2P', cursive;
-        font-size: 0.65rem;
+        font-size: 0.58rem;
         color: #0f380f;
         text-align: center;
         flex: 1;
-        margin: 0 15px;
-        line-height: 1.4;
+        margin: 0 10px;
+        line-height: 1.3;
     }}
 
     .retro-action-btns {{
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
+        flex-shrink: 0;
     }}
 
     .retro-btn-circle {{
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
         border-radius: 50%;
         border: 2px solid #000000;
         display: flex;
         align-items: center;
         justify-content: center;
         font-family: 'Press Start 2P', cursive;
-        font-size: 0.6rem;
+        font-size: 0.55rem;
         font-weight: bold;
     }}
     .btn-red {{ background-color: #ff3b30; color: #ffffff; }}
@@ -474,7 +501,7 @@ if "current_view" not in st.session_state:
 
 
 # ============================================================
-# TELA 1: CÂMERA / UPLOAD (MOLDURA POKÉDEX CLASSIC)
+# TELA 1: CÂMERA / UPLOAD
 # ============================================================
 
 if st.session_state.current_view == "input":
@@ -483,13 +510,13 @@ if st.session_state.current_view == "input":
             <div class="retro-top-bar">
                 <div class="retro-big-lens"></div>
                 <div class="retro-title-area">
-                    <span class="retro-pokedex-title">POKÉDEX OF<br>ANOMALIES</span>
+                    <span class="retro-pokedex-title">POKÉDEX</span>
                     <div class="retro-pokeball-icon"></div>
                 </div>
             </div>
     """, unsafe_allow_html=True)
 
-    col_cam, col_up = st.tabs(["📷 CÂMERA", "🖼️ UPLOAD"])
+    col_cam, col_up = st.tabs(["CÂMERA", "UPLOAD"])
 
     camera_image = None
     uploaded_image = None
@@ -503,7 +530,7 @@ if st.session_state.current_view == "input":
     st.markdown("""
             <div class="retro-bottom-panel">
                 <div class="retro-name-type-bar">
-                    <span>NOME DO POKEMON</span>
+                    <span>NOME DO POKÉMON</span>
                     <span>TIPO(S)</span>
                 </div>
                 <div class="retro-controls-row">
@@ -515,8 +542,8 @@ if st.session_state.current_view == "input":
                         APONTE A CÂMERA OU ENVIE UMA FOTO PARA IDENTIFICAR O POKÉMON!
                     </div>
                     <div class="retro-action-btns">
-                        <div class="retro-btn-circle btn-red">X</div>
-                        <div class="retro-btn-circle btn-green">✓</div>
+                        <div class="retro-btn-circle btn-red"><i class="bi bi-x-lg"></i></div>
+                        <div class="retro-btn-circle btn-green"><i class="bi bi-check-lg"></i></div>
                     </div>
                 </div>
             </div>
@@ -532,7 +559,7 @@ if st.session_state.current_view == "input":
 
 
 # ============================================================
-# TELA 2: CARD SOBRE O FUNDO DA FLORESTA
+# TELA 2: CARD
 # ============================================================
 
 elif st.session_state.current_view == "card":
@@ -543,7 +570,7 @@ elif st.session_state.current_view == "card":
 
     pil_image = Image.open(st.session_state.image_source).convert("RGB")
 
-    with st.spinner("🔍 Analisando Pokémon..."):
+    with st.spinner("Analisando Pokémon..."):
         results = predict(pil_image)
         best = results[0]
         poke_data = fetch_pokeapi_data(best["name"])
@@ -590,6 +617,7 @@ elif st.session_state.current_view == "card":
     <!DOCTYPE html>
     <html>
     <head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         * {{
             box-sizing: border-box;
@@ -603,7 +631,8 @@ elif st.session_state.current_view == "card":
             overflow: hidden;
             background-image: url('{bg_css_url}');
             background-size: cover;
-            background-position: center;
+            background-position: center center;
+            background-repeat: no-repeat;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -649,7 +678,7 @@ elif st.session_state.current_view == "card":
             background: rgba(255, 255, 255, 0.22);
             border: none;
             color: white;
-            font-size: 22px;
+            font-size: 20px;
             cursor: pointer;
             width: 42px;
             height: 42px;
@@ -864,9 +893,9 @@ elif st.session_state.current_view == "card":
         <div class="pokeball-watermark"></div>
 
         <div class="app-header">
-            <button class="back-btn" onclick="closeCard()">←</button>
+            <button class="back-btn" onclick="closeCard()"><i class="bi bi-arrow-left"></i></button>
             <span style="font-weight: 700; font-size: 1.1rem; opacity: 0.9;">PokéVision UI</span>
-            <span style="font-size: 20px;">♡</span>
+            <span style="font-size: 20px;"><i class="bi bi-heart-fill"></i></span>
         </div>
 
         <div class="poke-title-section">
