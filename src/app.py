@@ -27,7 +27,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Busca pelo nome exato do GitHub: fundo_floresta.jpg
+# Busca pelo fundo_floresta.jpg
 def load_bg_base64():
     possible_names = [
         "fundo_floresta.jpg", "fundo_floresta.png", "fundo_floresta.jpeg",
@@ -88,8 +88,55 @@ MAX_STATS = {
     "SP. ATTACK": 194, "SP. DEFENSE": 230, "SPEED": 180
 }
 
+TRANSLATE_LOCATIONS = {
+    "Forest Of Focus": "Floresta do Foco",
+    "Training Lowlands": "Planícies de Treino",
+    "Max Den": "Ninho Max",
+    "Area": "Área",
+    "Route": "Rota",
+    "Cave": "Caverna",
+    "Mountain": "Montanha",
+    "Lake": "Lago",
+    "City": "Cidade",
+    "Town": "Vila",
+    "Sea": "Mar"
+}
+
+def translate_location_text(location_str):
+    for en, pt in TRANSLATE_LOCATIONS.items():
+        location_str = location_str.replace(en, pt)
+    return location_str
+
+def translate_pokedex_text(text):
+    if not text:
+        return "Um Pokémon fascinante registrado na Pokédex oficial."
+    
+    # Limpa caracteres estranhos de quebra de linha da Pokédex
+    clean_text = text.replace("\n", " ").replace("\f", " ").strip()
+
+    # Tradução via API MyMemory (gratuita)
+    try:
+        api_url = f"https://api.mymemory.translated.net/get?q={requests.utils.quote(clean_text)}&langpair=en|pt-BR"
+        resp = requests.get(api_url, timeout=3)
+        if resp.status_code == 200:
+            translated = resp.json()["responseData"]["translatedText"]
+            if translated and not translated.startswith("MYMEMORY WARNING"):
+                return translated
+    except Exception:
+        pass
+
+    # Tradução direta caso a API falhe
+    common_phrases = {
+        "When it swings its burning tail, it elevates the temperature to unbearably high levels.":
+            "Quando balança a sua cauda em chamas, ele eleva a temperatura a níveis insuportavelmente altos.",
+        "Spits fire that is hot enough to melt boulders. Known to cause forest fires unintentionally.":
+            "Cospe fogo quente o suficiente para derreter rochas. Conhecido por causar incêndios florestais sem intenção."
+    }
+    
+    return common_phrases.get(clean_text, clean_text)
+
 # ============================================================
-# ESTILIZAÇÃO CSS GLOBAL (BOOTSTRAP ICONS + RETRO)
+# ESTILIZAÇÃO CSS GLOBAL
 # ============================================================
 
 st.markdown(f"""
@@ -138,7 +185,6 @@ st.markdown(f"""
         left: 0 !important;
     }}
 
-    /* ESTRUTURA DA POKÉDEX */
     .retro-pokedex-frame {{
         background-color: #ff3b30;
         border: 4px solid #000000;
@@ -200,7 +246,6 @@ st.markdown(f"""
         border-radius: 50%;
     }}
 
-    /* TELA CENTRAL DA CÂMERA / UPLOAD */
     div[data-testid="stTabs"] {{
         background: #ffffff !important;
         border: 4px solid #000000 !important;
@@ -225,9 +270,19 @@ st.markdown(f"""
         border: 2px solid #000000 !important;
     }}
 
+    button[data-baseweb="tab"] p, button[data-baseweb="tab"] span {{
+        color: #000000 !important;
+        font-weight: bold !important;
+    }}
+
     button[data-baseweb="tab"][aria-selected="true"] {{
         background-color: #8bac0f !important;
-        color: #0f380f !important;
+        color: #000000 !important;
+    }}
+
+    button[data-baseweb="tab"][aria-selected="true"] p, 
+    button[data-baseweb="tab"][aria-selected="true"] span {{
+        color: #000000 !important;
     }}
 
     div[data-testid="stFileUploadDropzone"] {{
@@ -247,7 +302,6 @@ st.markdown(f"""
         box-shadow: 0 4px 0px #000000 !important;
     }}
 
-    /* PAINEL INFERIOR RETRO */
     .retro-bottom-panel {{
         margin-top: 16px;
         background-color: #4a4a4a;
@@ -350,22 +404,6 @@ def clean_pokemon_name(raw_name):
     return clean_name.lower().strip().replace(" ", "-")
 
 
-def translate_pokedex_text(text):
-    if not text:
-        return "Um Pokémon fascinante registrado na Pokédex oficial."
-    
-    replacements = {
-        "It ": "Ele ", "Its ": "Seu ", "They ": "Eles ",
-        "When it ": "Quando ele ", "If it ": "Se ele "
-    }
-    
-    translated = text
-    for en, pt in replacements.items():
-        translated = re.sub(r'\b' + re.escape(en) + r'\b', pt, translated, flags=re.IGNORECASE)
-    
-    return translated
-
-
 @st.cache_data
 def fetch_pokeapi_data(raw_pokemon_name):
     pokemon_name = clean_pokemon_name(raw_pokemon_name)
@@ -384,7 +422,9 @@ def fetch_pokeapi_data(raw_pokemon_name):
                 if type_resp.status_code == 200:
                     damage_rel = type_resp.json()["damage_relations"]
                     for double_damage in damage_rel["double_damage_from"]:
-                        weaknesses.add(double_damage["name"])
+                        w_name = double_damage["name"].lower()
+                        translated_w = TRANSLATE_TYPES.get(w_name, w_name.capitalize())
+                        weaknesses.add(translated_w)
 
             encounters_url = data["location_area_encounters"]
             encounters_resp = requests.get(encounters_url, timeout=3)
@@ -393,6 +433,7 @@ def fetch_pokeapi_data(raw_pokemon_name):
                 encounters_data = encounters_resp.json()
                 for enc in encounters_data[:3]:
                     loc_name = enc["location_area"]["name"].replace("-", " ").title()
+                    loc_name = translate_location_text(loc_name)
                     locations.append(loc_name)
             
             location_text = ", ".join(locations) if locations else "Inicial / Evolução"
@@ -404,14 +445,13 @@ def fetch_pokeapi_data(raw_pokemon_name):
             if species_resp.status_code == 200:
                 species_data = species_resp.json()
                 flavor_entries = species_data.get("flavor_text_entries", [])
-                pt_entry = next((e["flavor_text"] for e in flavor_entries if e["language"]["name"] == "pt"), None)
+                pt_entry = next((e["flavor_text"] for e in flavor_entries if e["language"]["name"] in ["pt", "pt-BR"]), None)
                 en_entry = next((e["flavor_text"] for e in flavor_entries if e["language"]["name"] == "en"), None)
                 
                 if pt_entry:
                     pokedex_entry = pt_entry.replace("\n", " ").replace("\f", " ")
                 elif en_entry:
-                    raw_text = en_entry.replace("\n", " ").replace("\f", " ")
-                    pokedex_entry = translate_pokedex_text(raw_text)
+                    pokedex_entry = translate_pokedex_text(en_entry)
 
             return {
                 "id": data["id"],
@@ -436,16 +476,16 @@ def fetch_pokeapi_data(raw_pokemon_name):
         pass
 
     return {
-        "id": 4,
+        "id": 5,
         "name": pokemon_name.capitalize(),
-        "height": 0.6,
-        "weight": 8.5,
+        "height": 1.1,
+        "weight": 19.0,
         "types": ["fire"],
-        "weaknesses": ["water", "ground", "rock"],
-        "location": "Rota 3 e Kanto",
-        "pokedex_entry": "A chama que queima na ponta de sua cauda indica sua força vital.",
-        "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/4.png",
-        "stats": {"HP": 39, "ATTACK": 52, "DEFENSE": 43, "SP. ATTACK": 60, "SP. DEFENSE": 50, "SPEED": 65}
+        "weaknesses": ["Água", "Terra", "Pedra"],
+        "location": "Inicial / Evolução",
+        "pokedex_entry": "Quando balança a sua cauda em chamas, ele eleva a temperatura a níveis insuportavelmente altos.",
+        "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/5.png",
+        "stats": {"HP": 58, "ATTACK": 64, "DEFENSE": 58, "SP. ATTACK": 80, "SP. DEFENSE": 65, "SPEED": 80}
     }
 
 
